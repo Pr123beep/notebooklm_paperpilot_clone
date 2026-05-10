@@ -13,41 +13,12 @@ const { listFiles, deleteFile } = require("./controllers/filesController");
 fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
 
 const app = express();
-
-// FRONTEND_URL may be a single origin or a comma-separated list.
-// Useful for: "https://paperpilot.netlify.app,https://*.netlify.app,http://localhost:3000"
-const allowedOrigins = FRONTEND_URL.split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-function isOriginAllowed(origin) {
-  if (!origin) return true; // same-origin / curl / health checks
-  for (const allowed of allowedOrigins) {
-    if (allowed === "*") return true;
-    if (allowed === origin) return true;
-    // simple wildcard subdomain support: https://*.netlify.app
-    if (allowed.includes("*")) {
-      const pattern =
-        "^" +
-        allowed
-          .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-          .replace(/\*/g, "[^.]+") +
-        "$";
-      if (new RegExp(pattern).test(origin)) return true;
-    }
-  }
-  return false;
-}
-
 app.use(
   cors({
-    origin: (origin, cb) => {
-      if (isOriginAllowed(origin)) return cb(null, true);
-      return cb(new Error(`Origin not allowed by CORS: ${origin}`));
-    },
+    origin: FRONTEND_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    optionsSuccessStatus: 200,
+    optionsSuccessStatus: 200 
   })
 );
 
@@ -106,7 +77,7 @@ async function start() {
   await ensureIndexReady();
   app.listen(PORT, () => {
     console.log(`PaperPilot API listening on http://localhost:${PORT}`);
-    console.log(`CORS allowed origins: ${allowedOrigins.join(", ")}`);
+    console.log(`CORS origin: ${FRONTEND_URL}`);
   });
 }
 
