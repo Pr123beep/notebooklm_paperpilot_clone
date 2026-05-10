@@ -1,10 +1,47 @@
 const fs = require("fs/promises");
 const path = require("path");
 const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
+const csv = require("csv-parser");
+const { Readable } = require("stream");
 const { v4: uuidv4 } = require("uuid");
 const { chunkText } = require("./chunkingService");
 const { embedDocuments } = require("./embeddingsService");
 const { upsertVectors } = require("./pineconeService");
+
+/**
+ * Extract text from CSV file
+ */
+async function extractTextFromCSV(filePath) {
+  const content = await fs.readFile(filePath, "utf8");
+  return new Promise((resolve, reject) => {
+    const rows = [];
+    Readable.from([content])
+      .pipe(csv())
+      .on("data", (row) => {
+        // Convert each row to readable text
+        const rowText = Object.values(row).join(" | ");
+        rows.push(rowText);
+      })
+      .on("end", () => {
+        resolve(rows.join("\n"));
+      })
+      .on("error", reject);
+  });
+}
+
+/**
+ * Extract text from DOC/DOCX file
+ */
+async function extractTextFromDOCX(filePath) {
+  try {
+    const buffer = await fs.readFile(filePath);
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value || "";
+  } catch (error) {
+    throw new Error(`Failed to parse DOCX file: ${error.message}`);
+  }
+}
 
 /**
  * @param {string} filePath
@@ -21,7 +58,19 @@ async function extractTextFromFile(filePath, mimeOrExt) {
   if (lower.includes("text") || ext === ".txt") {
     return (await fs.readFile(filePath, "utf8")).trim();
   }
-  throw new Error("Unsupported file type. Only PDF and TXT are allowed.");
+  if (lower.includes("csv") || ext === ".csv") {
+    return await extractTextFromCSV(filePath);
+  }
+  if (
+    lower.includes("word") ||
+    lower.includes("docx") ||
+    lower.includes("msword") ||
+    ext === ".docx" ||
+    ext === ".doc"
+  ) {
+    return await extractTextFromDOCX(filePath);
+  }
+  throw new Error("Unsupported file type. Only PDF, TXT, CSV, and DOC/DOCX are allowed.");
 }
 
 /**

@@ -41,7 +41,7 @@ export function UploadZone({
     [onFileSelected]
   );
 
-  const acceptAttr = ACCEPTED_EXTENSIONS.join(",") + ",application/pdf,text/plain";
+  const acceptAttr = ACCEPTED_EXTENSIONS.join(",") + ",application/pdf,text/plain,text/csv,application/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   const isCompact = variant === "compact";
 
   return (
@@ -82,7 +82,7 @@ export function UploadZone({
         {!isCompact && (
           <>
             <p className="mt-3 text-sm font-semibold text-[var(--fg)]">
-              Drop a PDF or TXT here
+              Drop a PDF, TXT, CSV, or DOC here
             </p>
             <p className="mt-1 text-xs text-[var(--fg-subtle)]">
               or browse from your device · up to {MAX_UPLOAD_MB} MB

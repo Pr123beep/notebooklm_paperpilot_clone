@@ -41,12 +41,16 @@ const upload = multer({
     const okMime =
       file.mimetype === "application/pdf" ||
       file.mimetype === "text/plain" ||
-      file.mimetype === "application/octet-stream";
-    const okExt = /\.(pdf|txt)$/i.test(name);
-    if ((okMime || okExt) && /\.(pdf|txt)$/i.test(name)) {
+      file.mimetype === "application/octet-stream" ||
+      file.mimetype === "text/csv" ||
+      file.mimetype === "application/csv" ||
+      file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      file.mimetype === "application/msword";
+    const okExt = /\.(pdf|txt|csv|docx?|doc)$/i.test(name);
+    if ((okMime || okExt) && /\.(pdf|txt|csv|docx?|doc)$/i.test(name)) {
       return cb(null, true);
     }
-    cb(new Error("Only PDF and TXT files are allowed."));
+    cb(new Error("Only PDF, TXT, CSV, and DOC/DOCX files are allowed."));
   },
 });
 
