@@ -2,7 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { FilePlus2, Loader2, UploadCloud } from "lucide-react";
-import { ACCEPTED_EXTENSIONS, MAX_UPLOAD_MB } from "@/lib/constants";
+import {
+  ACCEPTED_EXTENSIONS,
+  ACCEPTED_LABEL,
+  MAX_UPLOAD_MB,
+} from "@/lib/constants";
 
 type Variant = "block" | "compact";
 
@@ -41,7 +45,14 @@ export function UploadZone({
     [onFileSelected]
   );
 
-  const acceptAttr = ACCEPTED_EXTENSIONS.join(",") + ",application/pdf,text/plain,text/csv,application/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  const acceptAttr = [
+    ...ACCEPTED_EXTENSIONS,
+    "application/pdf",
+    "text/plain",
+    "text/csv",
+    "application/csv",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ].join(",");
   const isCompact = variant === "compact";
 
   return (
@@ -82,7 +93,7 @@ export function UploadZone({
         {!isCompact && (
           <>
             <p className="mt-3 text-sm font-semibold text-[var(--fg)]">
-              Drop a PDF, TXT, CSV, or DOC here
+              Drop a {ACCEPTED_LABEL} here
             </p>
             <p className="mt-1 text-xs text-[var(--fg-subtle)]">
               or browse from your device · up to {MAX_UPLOAD_MB} MB

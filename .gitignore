@@ -45,3 +45,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Cursor / VS Code Local History extension
+/.lh/
+**/.lh/
+
+# IDE noise
+.vscode/
+.idea/

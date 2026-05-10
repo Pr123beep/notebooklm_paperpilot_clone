@@ -120,7 +120,7 @@ export function SourcesSidebar({
       </div>
 
       <footer className="border-t border-[var(--border)] px-4 py-2.5 text-[10.5px] uppercase tracking-wider text-[var(--fg-subtle)]">
-        PDF · TXT · grounded answers only
+        PDF · TXT · CSV · DOCX · grounded answers only
       </footer>
     </aside>
   );

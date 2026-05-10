@@ -4,7 +4,8 @@ export const LS_ACTIVE_FILE_IDS = "paperpilot.activeSources.v1";
 export const APP_NAME = "PaperPilot";
 export const APP_TAGLINE = "Navigate your documents with AI";
 
-export const ACCEPTED_EXTENSIONS = [".pdf", ".txt", ".csv", ".doc", ".docx"] as const;
+export const ACCEPTED_EXTENSIONS = [".pdf", ".txt", ".csv", ".docx"] as const;
+export const ACCEPTED_LABEL = "PDF, TXT, CSV, or DOCX";
 export const MAX_UPLOAD_MB = 32;
 
 export const QUICK_PROMPTS: { id: string; label: string; prompt: string }[] = [

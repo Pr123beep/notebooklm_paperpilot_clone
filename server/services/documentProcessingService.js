@@ -10,7 +10,12 @@ const { embedDocuments } = require("./embeddingsService");
 const { upsertVectors } = require("./pineconeService");
 
 /**
- * Extract text from CSV file
+ * Extract text from a CSV file. The first row is treated as headers and each
+ * subsequent row is rendered as `header: value | header: value` so the LLM
+ * keeps the column context when it cites a chunk.
+ *
+ * @param {string} filePath
+ * @returns {Promise<string>}
  */
 async function extractTextFromCSV(filePath) {
   const content = await fs.readFile(filePath, "utf8");
@@ -19,58 +24,70 @@ async function extractTextFromCSV(filePath) {
     Readable.from([content])
       .pipe(csv())
       .on("data", (row) => {
-        // Convert each row to readable text
-        const rowText = Object.values(row).join(" | ");
-        rows.push(rowText);
+        const pairs = Object.entries(row)
+          .filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== "")
+          .map(([k, v]) => `${k}: ${String(v).trim()}`);
+        if (pairs.length) rows.push(pairs.join(" | "));
       })
-      .on("end", () => {
-        resolve(rows.join("\n"));
-      })
+      .on("end", () => resolve(rows.join("\n")))
       .on("error", reject);
   });
 }
 
 /**
- * Extract text from DOC/DOCX file
+ * Extract plain text from a DOCX file (modern Office Open XML).
+ * Note: legacy .doc files are NOT supported — mammoth only reads .docx.
+ *
+ * @param {string} filePath
+ * @returns {Promise<string>}
  */
 async function extractTextFromDOCX(filePath) {
   try {
     const buffer = await fs.readFile(filePath);
     const result = await mammoth.extractRawText({ buffer });
-    return result.value || "";
+    return (result.value || "").trim();
   } catch (error) {
-    throw new Error(`Failed to parse DOCX file: ${error.message}`);
+    throw new Error(`Could not parse DOCX file: ${error.message}`);
   }
 }
 
 /**
+ * Extract plain text from a supported file. Detection prefers the file
+ * extension (reliable) and falls back to MIME (best-effort).
+ *
  * @param {string} filePath
  * @param {string} mimeOrExt
+ * @returns {Promise<string>}
  */
 async function extractTextFromFile(filePath, mimeOrExt) {
-  const lower = (mimeOrExt || "").toLowerCase();
   const ext = path.extname(filePath).toLowerCase();
-  if (lower.includes("pdf") || ext === ".pdf") {
+  const mime = (mimeOrExt || "").toLowerCase();
+
+  if (ext === ".pdf" || mime === "application/pdf") {
     const buf = await fs.readFile(filePath);
     const data = await pdfParse(buf);
     return (data.text || "").trim();
   }
-  if (lower.includes("text") || ext === ".txt") {
+
+  if (ext === ".txt" || mime === "text/plain") {
     return (await fs.readFile(filePath, "utf8")).trim();
   }
-  if (lower.includes("csv") || ext === ".csv") {
-    return await extractTextFromCSV(filePath);
+
+  if (ext === ".csv" || mime === "text/csv" || mime === "application/csv") {
+    return (await extractTextFromCSV(filePath)).trim();
   }
+
   if (
-    lower.includes("word") ||
-    lower.includes("docx") ||
-    lower.includes("msword") ||
     ext === ".docx" ||
-    ext === ".doc"
+    mime ===
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ) {
     return await extractTextFromDOCX(filePath);
   }
-  throw new Error("Unsupported file type. Only PDF, TXT, CSV, and DOC/DOCX are allowed.");
+
+  throw new Error(
+    "Unsupported file type. Only PDF, TXT, CSV, and DOCX are allowed."
+  );
 }
 
 /**
@@ -105,12 +122,10 @@ async function processAndIndexDocument(input) {
 
   await upsertVectors(vectors);
 
-  const uploadDate = new Date().toISOString();
-
   return {
     fileId,
     fileName: input.originalName,
-    uploadDate,
+    uploadDate: new Date().toISOString(),
     chunkCount: chunks.length,
   };
 }

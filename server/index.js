@@ -12,13 +12,26 @@ const { listFiles, deleteFile } = require("./controllers/filesController");
 
 fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
 
+// Normalize FRONTEND_URL into an allow-list. Tolerates trailing slashes,
+// accepts a comma-separated list (so Netlify preview deploys can be added),
+// and falls back to allowing requests with no Origin header (curl, healthchecks).
+const allowedOrigins = (FRONTEND_URL || "")
+  .split(",")
+  .map((o) => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
 const app = express();
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      const normalized = origin.replace(/\/+$/, "");
+      if (allowedOrigins.includes(normalized)) return cb(null, true);
+      return cb(new Error(`CORS: origin "${origin}" not in FRONTEND_URL allow-list`));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
-    optionsSuccessStatus: 200 
+    optionsSuccessStatus: 200,
   })
 );
 
@@ -33,24 +46,31 @@ const storage = multer.diskStorage({
   },
 });
 
+// Source of truth for the formats the document pipeline can actually parse.
+// .doc (Word 97-2003 binary) is intentionally NOT supported — mammoth only
+// handles modern .docx; users get a clearer error than a parse crash.
+const ALLOWED_EXTENSIONS = /\.(pdf|txt|csv|docx)$/i;
+const ALLOWED_MIMES = new Set([
+  "application/pdf",
+  "text/plain",
+  "text/csv",
+  "application/csv",
+  "application/vnd.ms-excel", // Excel often saves CSVs with this MIME
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/octet-stream", // some browsers send this for known extensions
+]);
+
 const upload = multer({
   storage,
   limits: { fileSize: 32 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const name = file.originalname || "";
-    const okMime =
-      file.mimetype === "application/pdf" ||
-      file.mimetype === "text/plain" ||
-      file.mimetype === "application/octet-stream" ||
-      file.mimetype === "text/csv" ||
-      file.mimetype === "application/csv" ||
-      file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-      file.mimetype === "application/msword";
-    const okExt = /\.(pdf|txt|csv|docx?|doc)$/i.test(name);
-    if ((okMime || okExt) && /\.(pdf|txt|csv|docx?|doc)$/i.test(name)) {
+    const extOk = ALLOWED_EXTENSIONS.test(name);
+    const mimeOk = ALLOWED_MIMES.has(file.mimetype);
+    if (extOk && (mimeOk || file.mimetype === "")) {
       return cb(null, true);
     }
-    cb(new Error("Only PDF, TXT, CSV, and DOC/DOCX files are allowed."));
+    return cb(new Error("Only PDF, TXT, CSV, and DOCX files are allowed."));
   },
 });
 

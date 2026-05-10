@@ -12,6 +12,7 @@ import {
   deleteServerFile,
 } from "@/services/apiClient";
 import type { ChatMessage } from "@/lib/types";
+import { ACCEPTED_EXTENSIONS, ACCEPTED_LABEL } from "@/lib/constants";
 
 function newId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -50,8 +51,9 @@ export function NotebookApp() {
   const handleUpload = useCallback(
     async (file: File) => {
       const lower = file.name.toLowerCase();
-      if (!lower.endsWith(".pdf") && !lower.endsWith(".txt")) {
-        setError("Only PDF and TXT files are supported.");
+      const ok = ACCEPTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
+      if (!ok) {
+        setError(`Only ${ACCEPTED_LABEL} files are supported.`);
         return;
       }
       setError(null);

@@ -30,7 +30,7 @@ notebooklm_clone-main/
     ├── services/           business logic (chat, chunking, embeddings, pinecone)
     ├── utils/              env loader + JSON metadata store
     ├── data/               persisted file metadata (gitignored)
-    └── uploads/            stored PDF/TXT files (gitignored)
+    └── uploads/            stored source files (gitignored)
 ```
 
 The frontend keeps a copy of the source list in `localStorage`, then reconciles it against the server on load — so refreshing the page never loses your selections.
@@ -41,7 +41,7 @@ The frontend keeps a copy of the source list in `localStorage`, then reconciles 
 
 | Capability                      | Notes                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------- |
-| Drag-and-drop PDF / TXT upload  | Files are chunked, embedded, and upserted to Pinecone in one request      |
+| Drag-and-drop PDF / TXT / CSV / DOCX uploads | Files are chunked, embedded, and upserted to Pinecone in one request |
 | Multi-source selection          | Pick exactly which documents the model is allowed to read for each answer |
 | Grounded answers with citations | Every reply ships with the chunks it used and a relevance score           |
 | Studio quick prompts            | One-click "Summarize", "Build a FAQ", "Generate a study guide", and more  |
@@ -149,7 +149,7 @@ Open <http://localhost:3000>.
 
 ## Using PaperPilot
 
-1. **Add a source.** Drag a PDF or TXT file into the *Sources* panel on the left, or click *Choose file*.
+1. **Add a source.** Drag a PDF, TXT, CSV, or DOCX file into the *Sources* panel on the left, or click *Choose file*.
 2. **Pick what the model can see.** Use the checkboxes to enable / disable individual sources. The status pill in the header (e.g. *2 of 5 sources active*) reflects what will be queried next.
 3. **Ask anything.** Type into the composer at the bottom of the conversation. `Enter` sends, `Shift+Enter` inserts a newline.
 4. **Verify the answer.** Each assistant message has a collapsible *Sources used* drawer with the exact chunks and a relevance bar.
@@ -191,7 +191,7 @@ Open <http://localhost:3000>.
 ### Indexing pipeline
 
 1. Multer writes the upload to `server/uploads/`.
-2. `pdf-parse` extracts the raw text (TXT files are read directly).
+2. Text is extracted with the right parser per format: `pdf-parse` for PDFs, `mammoth` for DOCX, `csv-parser` for CSV (rows rendered as `header: value | header: value` so the LLM keeps column context), and direct UTF-8 read for TXT.
 3. LangChain's `RecursiveCharacterTextSplitter` slices the text into 500-character chunks with 100 characters of overlap.
 4. Each chunk is embedded locally with `Xenova/all-MiniLM-L6-v2` → 384-dimensional vectors.
 5. Vectors are upserted to Pinecone with `{ fileId, fileName, chunkIndex, text }` metadata.
@@ -213,7 +213,7 @@ All endpoints live under the Express server (default `http://localhost:3001`).
 
 ### `POST /api/upload`
 
-`multipart/form-data` with a single `file` field (PDF or TXT, ≤ 32 MB).
+`multipart/form-data` with a single `file` field (PDF, TXT, CSV, or DOCX, ≤ 32 MB).
 
 ```json
 {
