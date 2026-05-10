@@ -51,6 +51,13 @@ The frontend keeps a copy of the source list in `localStorage`, then reconciles 
 
 ---
 
+## Live demos
+
+- https://notebooklm-paperpilot-clone.onrender.com/
+- https://paperpilot-rag.netlify.app/
+
+---
+
 ## Prerequisites
 
 Before you start, make sure you have:
