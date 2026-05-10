@@ -1,0 +1,389 @@
+@import "tailwindcss";
+
+/* ============================================================
+   PaperPilot — "Onyx" theme (black aesthetic, monochrome)
+   ------------------------------------------------------------
+   Pure black canvas, white-driven primary UI, subtle gray
+   surfaces, no colored accents. Vercel / Linear / Apple Pro
+   inspired.
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces — true black with carefully spaced grays */
+  --bg-base: #000000;
+  --bg-elev: #0a0a0c;
+  --bg-muted: #131316;
+  --bg-strong: #1a1a1d;
+
+  /* Borders — barely-there, then visible */
+  --border: #1c1c20;
+  --border-strong: #2a2a30;
+  --border-bright: rgba(255, 255, 255, 0.10);
+
+  /* Text — white-driven, never harsh */
+  --fg: #fafafa;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+
+  /* Brand = white. Period. */
+  --brand: #ffffff;
+  --brand-strong: #f4f4f5;
+  --brand-2: #e4e4e7;
+  --brand-soft: rgba(255, 255, 255, 0.08);
+
+  /* Accent = also white, but at lower intensity for chips */
+  --accent: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.10);
+
+  /* Semantic — kept slightly tinted so errors/success still read */
+  --danger: #f87171;
+  --success: #4ade80;
+
+  /* Effects — pure white glows */
+  --ring: rgba(255, 255, 255, 0.28);
+  --glow-violet: 0 10px 30px -8px rgba(255, 255, 255, 0.18);
+  --glow-cyan: 0 10px 30px -8px rgba(255, 255, 255, 0.22);
+  --glow-pink: 0 8px 24px -8px rgba(255, 255, 255, 0.12);
+  --glow-soft: 0 6px 20px -10px rgba(255, 255, 255, 0.18);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --bg-base: #ffffff;
+    --bg-elev: #fafafa;
+    --bg-muted: #f4f4f5;
+    --bg-strong: #e4e4e7;
+
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --border-bright: rgba(0, 0, 0, 0.08);
+
+    --fg: #09090b;
+    --fg-muted: #52525b;
+    --fg-subtle: #71717a;
+
+    /* In light mode, brand flips to black */
+    --brand: #09090b;
+    --brand-strong: #18181b;
+    --brand-2: #27272a;
+    --brand-soft: rgba(9, 9, 11, 0.06);
+
+    --accent: #09090b;
+    --accent-soft: rgba(9, 9, 11, 0.08);
+
+    --danger: #dc2626;
+    --success: #16a34a;
+
+    --ring: rgba(9, 9, 11, 0.28);
+    --glow-violet: 0 10px 28px -10px rgba(0, 0, 0, 0.22);
+    --glow-cyan: 0 10px 28px -10px rgba(0, 0, 0, 0.18);
+    --glow-pink: 0 8px 22px -10px rgba(0, 0, 0, 0.14);
+    --glow-soft: 0 6px 18px -10px rgba(0, 0, 0, 0.18);
+  }
+}
+
+@theme inline {
+  --color-background: var(--bg-base);
+  --color-foreground: var(--fg);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  /* Subtle white-only depth — soft vignette-style glows */
+  background:
+    radial-gradient(900px 600px at 8% -8%, rgba(255, 255, 255, 0.045), transparent 60%),
+    radial-gradient(800px 500px at 100% 0%, rgba(255, 255, 255, 0.025), transparent 65%),
+    radial-gradient(900px 600px at 50% 110%, rgba(255, 255, 255, 0.02), transparent 60%),
+    var(--bg-base);
+  background-attachment: fixed;
+  color: var(--fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background:
+      radial-gradient(900px 600px at 8% -8%, rgba(0, 0, 0, 0.04), transparent 60%),
+      radial-gradient(800px 500px at 100% 0%, rgba(0, 0, 0, 0.025), transparent 65%),
+      var(--bg-base);
+  }
+}
+
+/* Selection */
+::selection {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--fg);
+}
+@media (prefers-color-scheme: light) {
+  ::selection {
+    background: rgba(0, 0, 0, 0.12);
+    color: var(--fg);
+  }
+}
+
+/* Custom scrollbar */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-subtle);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* ============================================================
+   Reusable utility classes
+   ============================================================ */
+
+.surface {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+.surface-muted {
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+/* "Aurora" gradient is now a subtle white-to-bone monochrome */
+.gradient-aurora {
+  background: linear-gradient(140deg, #ffffff 0%, #d4d4d8 100%);
+}
+
+.gradient-aurora-text {
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-color-scheme: light) {
+  .gradient-aurora {
+    background: linear-gradient(140deg, #18181b 0%, #3f3f46 100%);
+  }
+  .gradient-aurora-text {
+    background: linear-gradient(135deg, #09090b 0%, #52525b 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  color: #0a0a0c;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.55rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 6px 20px -8px rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.15s ease, filter 0.15s ease, background 0.15s ease;
+}
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: #ffffff;
+  filter: brightness(1.02);
+  box-shadow:
+    0 12px 30px -8px rgba(255, 255, 255, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: light) {
+  .btn-primary {
+    background: #09090b;
+    color: #fafafa;
+    border-color: rgba(0, 0, 0, 0.18);
+    box-shadow:
+      0 6px 20px -8px rgba(0, 0, 0, 0.32),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #18181b;
+    box-shadow:
+      0 12px 30px -8px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  }
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: transparent;
+  color: var(--fg-muted);
+  font-weight: 500;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-muted);
+  color: var(--fg);
+  border-color: var(--border-strong);
+}
+.btn-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  background: var(--brand-soft);
+  color: var(--fg);
+  border: 1px solid var(--border-bright);
+}
+
+.chip-accent {
+  background: var(--accent-soft);
+  color: var(--fg);
+  border-color: var(--border-bright);
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+
+@keyframes pp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: pp-fade-in 0.25s ease-out both;
+}
+
+@keyframes pp-pulse-dot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.45;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pp-pulse-dot 1.2s infinite ease-in-out both;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+@keyframes pp-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted) 0%,
+    var(--border) 40%,
+    var(--bg-muted) 80%
+  );
+  background-size: 200% 100%;
+  animation: pp-shimmer 1.6s infinite linear;
+}
+
+@keyframes pp-glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+  }
+}
+
+.glow-pulse {
+  animation: pp-glow-pulse 2.6s ease-out infinite;
+}
+
+/* Focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   Tiny semantic helpers used by inverted surfaces
+   ============================================================ */
+
+.text-on-brand {
+  color: #0a0a0c;
+}
+@media (prefers-color-scheme: light) {
+  .text-on-brand {
+    color: #fafafa;
+  }
+}

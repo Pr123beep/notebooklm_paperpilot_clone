@@ -1,0 +1,21 @@
+# PaperPilot frontend — Netlify build settings
+# When connecting the site, set the *base directory* to `client` in the
+# Netlify dashboard. This file lives inside that base, so all paths are
+# relative to client/.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Pin Node to a version that matches local dev (Next.js 16 requires >= 20)
+  NODE_VERSION = "20"
+
+# Netlify auto-detects Next.js 16 and installs the runtime, but pinning it
+# explicitly avoids the very rare "no plugin found" error on first deploy.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Set NEXT_PUBLIC_API_BASE_URL in the Netlify dashboard
+# (Site settings → Environment variables) — leave it out of this file
+# so the same toml works for any backend URL.
