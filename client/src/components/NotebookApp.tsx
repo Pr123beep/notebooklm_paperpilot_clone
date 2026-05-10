@@ -22,10 +22,20 @@ function newId(): string {
 }
 
 function readErrorMessage(e: unknown, fallback: string): string {
-  if (e && typeof e === "object" && "response" in e) {
-    const resp = (e as { response?: { data?: { error?: string } } }).response;
-    const msg = resp?.data?.error;
-    if (msg) return String(msg);
+  if (e && typeof e === "object") {
+    const obj = e as {
+      response?: { data?: { error?: string } };
+      code?: string;
+      message?: string;
+    };
+    const serverMsg = obj.response?.data?.error;
+    if (serverMsg) return String(serverMsg);
+    if (obj.code === "ECONNABORTED") {
+      return "Upload took too long and was aborted. Large CSV/PDF files can exceed 10 minutes on the free-tier server — try a smaller file or split it into pieces.";
+    }
+    if (obj.code === "ERR_NETWORK") {
+      return "Could not reach the API server. It may be cold-starting (free-tier Render takes ~30–60 s) — wait a moment and try again.";
+    }
   }
   if (e instanceof Error) return e.message;
   return fallback;
