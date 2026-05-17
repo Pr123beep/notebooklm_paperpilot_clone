@@ -8,6 +8,7 @@ import { StudioPanel } from "@/components/StudioPanel";
 import { useLocalFileState } from "@/hooks/useLocalFileState";
 import {
   uploadFile,
+  uploadUrl,
   chatRequest,
   deleteServerFile,
 } from "@/services/apiClient";
@@ -73,6 +74,22 @@ export function NotebookApp() {
         addFile(meta);
       } catch (e: unknown) {
         setError(readErrorMessage(e, "Upload failed."));
+      } finally {
+        setUploading(false);
+      }
+    },
+    [addFile]
+  );
+
+  const handleUploadUrl = useCallback(
+    async (url: string) => {
+      setError(null);
+      setUploading(true);
+      try {
+        const meta = await uploadUrl(url);
+        addFile(meta);
+      } catch (e: unknown) {
+        setError(readErrorMessage(e, "Could not ingest that URL."));
       } finally {
         setUploading(false);
       }
@@ -182,6 +199,7 @@ export function NotebookApp() {
           onSelectAll={selectAll}
           busyFileId={busyFileId}
           handleUpload={handleUpload}
+          handleUploadUrl={handleUploadUrl}
           uploading={uploading}
         />
 

@@ -16,6 +16,7 @@
     "@pinecone-database/pinecone": "^4.0.0",
     "@xenova/transformers": "^2.6.0",
     "axios": "^1.7.9",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.1",
     "dotenv": "^16.4.7",

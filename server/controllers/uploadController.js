@@ -1,6 +1,9 @@
 const path = require("path");
 const fs = require("fs/promises");
-const { processAndIndexDocument } = require("../services/documentProcessingService");
+const {
+  processAndIndexDocument,
+  processAndIndexUrl,
+} = require("../services/documentProcessingService");
 const { add: addMetadata } = require("../utils/fileMetadataStore");
 
 const UPLOAD_ROOT = path.join(__dirname, "..", "uploads");
@@ -50,7 +53,46 @@ async function handleUpload(req, res) {
   }
 }
 
+/**
+ * POST /api/upload-url — ingest a web page as a new source.
+ * Body: `{ url: string }`. Reuses the same chunk/embed/upsert pipeline as file uploads.
+ */
+async function handleUploadUrl(req, res) {
+  try {
+    const { url } = req.body || {};
+    if (!url || typeof url !== "string" || !url.trim()) {
+      return res.status(400).json({ error: "url is required." });
+    }
+
+    const result = await processAndIndexUrl({ url: url.trim() });
+
+    await addMetadata({
+      fileId: result.fileId,
+      fileName: result.fileName,
+      uploadDate: result.uploadDate,
+      storedPath: "",
+      sourceType: "url",
+      sourceUrl: url.trim(),
+    });
+
+    return res.status(201).json({
+      fileId: result.fileId,
+      fileName: result.fileName,
+      uploadDate: result.uploadDate,
+      chunkCount: result.chunkCount,
+      sourceType: "url",
+      sourceUrl: url.trim(),
+    });
+  } catch (err) {
+    console.error("URL upload error:", err);
+    return res.status(400).json({
+      error: err.message || "Failed to ingest URL.",
+    });
+  }
+}
+
 module.exports = {
   handleUpload,
+  handleUploadUrl,
   UPLOAD_ROOT,
 };

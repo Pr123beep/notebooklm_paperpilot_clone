@@ -1,12 +1,9 @@
 const { Groq } = require("groq-sdk");
-const { embedQuery } = require("./embeddingsService");
-const { queryByFileIds } = require("./pineconeService");
+const { enhancedRetrieve } = require("./retrievalService");
 const { GROQ_API_KEY } = require("../utils/env");
 
 const NOT_FOUND_MESSAGE =
   "I could not find this information in the selected sources.";
-
-const TOP_K = 12;
 
 function getClient() {
   return new Groq({ apiKey: GROQ_API_KEY });
@@ -15,9 +12,17 @@ function getClient() {
 /**
  * Run a grounded chat turn against a set of uploaded documents.
  *
+ * Retrieval runs through the full enhanced pipeline:
+ *   - Query rewriting / translation (typo fix + context expansion)
+ *   - Multiple sub-queries
+ *   - HyDE (hypothetical document embedding)
+ *   - Multi-vector Pinecone retrieval
+ *   - Reciprocal-rank-fusion re-ranking
+ *   - LLM-as-a-judge filter, with a one-shot retry under a more aggressive rewrite
+ *
  * @param {string} question
  * @param {string[]} selectedFileIds
- * @returns {Promise<{ answer: string, sources: Array<object> }>}
+ * @returns {Promise<{ answer: string, sources: Array<object>, retrieval: object }>}
  */
 async function chatWithDocuments(question, selectedFileIds) {
   const trimmedQ = (question || "").trim();
@@ -29,27 +34,19 @@ async function chatWithDocuments(question, selectedFileIds) {
     throw new Error("Select at least one uploaded source.");
   }
 
-  const vector = await embedQuery(trimmedQ);
-  const matches = await queryByFileIds(vector, ids, TOP_K);
-
-  const sources = (matches || [])
-    .map((m) => {
-      const md = m.metadata || {};
-      return {
-        fileId: String(md.fileId ?? ""),
-        fileName: String(md.fileName ?? ""),
-        chunkIndex:
-          typeof md.chunkIndex === "number"
-            ? md.chunkIndex
-            : Number(md.chunkIndex),
-        text: String(md.text ?? ""),
-        score: typeof m.score === "number" ? m.score : undefined,
-      };
-    })
-    .filter((s) => s.text);
+  const t0 = Date.now();
+  const { sources, diagnostics } = await enhancedRetrieve(trimmedQ, ids);
+  console.log(
+    `[chat] retrieval done in ${Date.now() - t0}ms — kept=${sources.length}` +
+      (diagnostics.retried ? " (retried with aggressive rewrite)" : "")
+  );
 
   if (!sources.length) {
-    return { answer: NOT_FOUND_MESSAGE, sources: [] };
+    return {
+      answer: NOT_FOUND_MESSAGE,
+      sources: [],
+      retrieval: diagnostics,
+    };
   }
 
   const contextBlocks = sources.map((s, i) => {
@@ -89,7 +86,7 @@ async function chatWithDocuments(question, selectedFileIds) {
   const answer =
     completion.choices?.[0]?.message?.content?.trim() || NOT_FOUND_MESSAGE;
 
-  return { answer, sources };
+  return { answer, sources, retrieval: diagnostics };
 }
 
 module.exports = {

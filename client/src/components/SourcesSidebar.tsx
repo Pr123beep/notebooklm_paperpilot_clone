@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   CheckSquare,
   FileText,
+  Globe,
   Library,
+  Link2,
   Loader2,
   Square,
   Trash2,
@@ -21,6 +23,7 @@ type Props = {
   onSelectAll: () => void;
   busyFileId: string | null;
   handleUpload: (file: File) => void;
+  handleUploadUrl: (url: string) => Promise<void> | void;
   uploading: boolean;
 };
 
@@ -33,6 +36,7 @@ export function SourcesSidebar({
   onSelectAll,
   busyFileId,
   handleUpload,
+  handleUploadUrl,
   uploading,
 }: Props) {
   const sortedFiles = useMemo(
@@ -88,11 +92,18 @@ export function SourcesSidebar({
 
       <div className="flex-1 space-y-2 overflow-y-auto px-3 py-3">
         {sortedFiles.length === 0 ? (
-          <UploadZone
-            onFileSelected={handleUpload}
-            uploading={uploading}
-            disabled={busyFileId !== null}
-          />
+          <>
+            <UploadZone
+              onFileSelected={handleUpload}
+              uploading={uploading}
+              disabled={busyFileId !== null}
+            />
+            <UrlIngestForm
+              onSubmit={handleUploadUrl}
+              uploading={uploading}
+              disabled={busyFileId !== null}
+            />
+          </>
         ) : (
           <>
             <ul className="space-y-1.5">
@@ -115,6 +126,11 @@ export function SourcesSidebar({
                 variant="compact"
               />
             </div>
+            <UrlIngestForm
+              onSubmit={handleUploadUrl}
+              uploading={uploading}
+              disabled={busyFileId !== null}
+            />
           </>
         )}
       </div>
@@ -164,15 +180,20 @@ function SourceRow({
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--fg-subtle)]" />
+          {file.sourceType === "url" ? (
+            <Globe className="h-3.5 w-3.5 shrink-0 text-[var(--fg-subtle)]" />
+          ) : (
+            <FileText className="h-3.5 w-3.5 shrink-0 text-[var(--fg-subtle)]" />
+          )}
           <span
             className="truncate text-[13px] font-medium text-[var(--fg)]"
-            title={file.fileName}
+            title={file.sourceUrl || file.fileName}
           >
             {file.fileName}
           </span>
         </div>
         <p className="mt-0.5 text-[10.5px] text-[var(--fg-subtle)]">
+          {file.sourceType === "url" ? "Web source · " : ""}
           Added {formatRelative(file.uploadDate)}
         </p>
       </div>
@@ -191,6 +212,76 @@ function SourceRow({
         )}
       </button>
     </li>
+  );
+}
+
+function UrlIngestForm({
+  onSubmit,
+  uploading,
+  disabled,
+}: {
+  onSubmit: (url: string) => Promise<void> | void;
+  uploading: boolean;
+  disabled: boolean;
+}) {
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = url.trim();
+    if (!trimmed || busy || uploading || disabled) return;
+    setBusy(true);
+    try {
+      await onSubmit(trimmed);
+      setUrl("");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const isBusy = busy || uploading;
+
+  return (
+    <form
+      onSubmit={submit}
+      className={[
+        "mt-2 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg-elev)] px-3 py-3",
+        disabled ? "pointer-events-none opacity-60" : "",
+      ].join(" ")}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
+        <Link2 className="h-3.5 w-3.5" />
+        Add web page
+      </div>
+      <p className="mt-1 text-[11px] leading-relaxed text-[var(--fg-subtle)]">
+        Paste any article or doc URL — it&apos;ll be fetched, cleaned, and indexed.
+      </p>
+      <div className="mt-2 flex gap-1.5">
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://example.com/article"
+          inputMode="url"
+          autoComplete="off"
+          disabled={isBusy || disabled}
+          className="focus-ring min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-base)] px-2.5 py-1.5 text-[12px] text-[var(--fg)] placeholder:text-[var(--fg-subtle)] disabled:opacity-60"
+        />
+        <button
+          type="submit"
+          disabled={isBusy || disabled || !url.trim()}
+          className="btn-primary focus-ring shrink-0 px-2.5 py-1.5 text-[12px] disabled:opacity-60"
+        >
+          {isBusy ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Link2 className="h-3.5 w-3.5" />
+          )}
+          {isBusy ? "Adding…" : "Add"}
+        </button>
+      </div>
+    </form>
   );
 }
 

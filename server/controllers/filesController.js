@@ -10,6 +10,8 @@ async function listFiles(_req, res) {
       fileId: f.fileId,
       fileName: f.fileName,
       uploadDate: f.uploadDate,
+      sourceType: f.sourceType || "file",
+      sourceUrl: f.sourceUrl || undefined,
     }));
     return res.json({ files: sanitized });
   } catch (err) {
@@ -32,11 +34,13 @@ async function deleteFile(req, res) {
 
     await deleteByFileId(fileId);
 
-    const absPath = path.join(__dirname, "..", removed.storedPath);
-    try {
-      await fs.unlink(absPath);
-    } catch (e) {
-      console.warn("Could not delete local file:", absPath, e.message);
+    if (removed.storedPath) {
+      const absPath = path.join(__dirname, "..", removed.storedPath);
+      try {
+        await fs.unlink(absPath);
+      } catch (e) {
+        console.warn("Could not delete local file:", absPath, e.message);
+      }
     }
 
     return res.json({ ok: true, fileId });

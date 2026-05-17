@@ -2,6 +2,8 @@ export type UploadedFileMeta = {
   fileId: string;
   fileName: string;
   uploadDate: string;
+  sourceType?: "file" | "url";
+  sourceUrl?: string;
 };
 
 export type SourceChunk = {

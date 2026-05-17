@@ -28,6 +28,15 @@ export async function uploadFile(file: File): Promise<UploadedFileMeta> {
   return data;
 }
 
+export async function uploadUrl(url: string): Promise<UploadedFileMeta> {
+  const { data } = await client.post<UploadedFileMeta>(
+    "/api/upload-url",
+    { url },
+    { timeout: UPLOAD_TIMEOUT_MS }
+  );
+  return data;
+}
+
 export async function chatRequest(body: {
   message: string;
   selectedFileIds: string[];

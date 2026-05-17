@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require("uuid");
 const { chunkText } = require("./chunkingService");
 const { embedDocuments } = require("./embeddingsService");
 const { upsertVectors } = require("./pineconeService");
+const { extractTextFromUrl } = require("./webLoaderService");
 
 // Aim for blocks roughly the size of one chunker chunk so each row group
 // becomes ~one final embedding. Far fewer embeddings than per-row.
@@ -122,21 +123,22 @@ async function extractTextFromFile(filePath, mimeOrExt) {
 const MAX_CHUNKS_PER_FILE = 2000;
 
 /**
- * Process upload: chunk, embed, upsert to Pinecone.
- * @param {{ filePath: string, originalName: string, mimeType: string }} input
- * @returns {Promise<{ fileId: string, fileName: string, uploadDate: string, chunkCount: number }>}
+ * Shared back-half of the indexing pipeline. Once we have raw text and a
+ * display name, both file uploads and URL ingestion route through here so the
+ * chunking / embedding / Pinecone-upsert logic stays in one place.
+ *
+ * @param {{ text: string, displayName: string, sourceLabel: string, extraMetadata?: object }} input
+ *   `sourceLabel` is just used for the log prefix (e.g. "upload" vs "url").
+ *   `extraMetadata` is merged into each vector's metadata (e.g. the source URL).
  */
-async function processAndIndexDocument(input) {
+async function chunkEmbedAndUpsert({ text, displayName, sourceLabel, extraMetadata }) {
   const fileId = uuidv4();
   const t0 = Date.now();
 
-  console.log(`[upload] start "${input.originalName}" mime=${input.mimeType}`);
-
-  const text = await extractTextFromFile(input.filePath, input.mimeType);
-  if (!text) {
-    throw new Error("Could not extract text from the file (empty document).");
+  if (!text || !text.trim()) {
+    throw new Error("Could not extract text from the source (empty document).");
   }
-  console.log(`[upload] extracted ${text.length} chars in ${Date.now() - t0}ms`);
+  console.log(`[${sourceLabel}] "${displayName}" — ${text.length} chars`);
 
   const t1 = Date.now();
   const chunks = await chunkText(text);
@@ -145,15 +147,15 @@ async function processAndIndexDocument(input) {
   }
   if (chunks.length > MAX_CHUNKS_PER_FILE) {
     throw new Error(
-      `This file produced ${chunks.length.toLocaleString()} chunks, which is over the ${MAX_CHUNKS_PER_FILE.toLocaleString()}-chunk limit. Try splitting the file into smaller pieces, or filter the CSV to fewer rows/columns before uploading.`
+      `This source produced ${chunks.length.toLocaleString()} chunks, which is over the ${MAX_CHUNKS_PER_FILE.toLocaleString()}-chunk limit. Try splitting it into smaller pieces or filtering it down before adding.`
     );
   }
-  console.log(`[upload] chunked into ${chunks.length} chunks in ${Date.now() - t1}ms`);
+  console.log(`[${sourceLabel}] chunked into ${chunks.length} chunks in ${Date.now() - t1}ms`);
 
   const t2 = Date.now();
   const embeddings = await embedDocuments(chunks);
   console.log(
-    `[upload] embedded ${embeddings.length} chunks in ${Date.now() - t2}ms (avg ${
+    `[${sourceLabel}] embedded ${embeddings.length} chunks in ${Date.now() - t2}ms (avg ${
       embeddings.length ? Math.round((Date.now() - t2) / embeddings.length) : 0
     }ms/chunk)`
   );
@@ -163,29 +165,67 @@ async function processAndIndexDocument(input) {
     values: embeddings[chunkIndex],
     metadata: {
       fileId,
-      fileName: input.originalName,
+      fileName: displayName,
       chunkIndex,
       text: chunkTextItem,
+      ...(extraMetadata || {}),
     },
   }));
 
   const t3 = Date.now();
   await upsertVectors(vectors);
   console.log(
-    `[upload] upserted ${vectors.length} vectors in ${Date.now() - t3}ms — total ${
+    `[${sourceLabel}] upserted ${vectors.length} vectors in ${Date.now() - t3}ms — total ${
       Date.now() - t0
     }ms`
   );
 
   return {
     fileId,
-    fileName: input.originalName,
+    fileName: displayName,
     uploadDate: new Date().toISOString(),
     chunkCount: chunks.length,
   };
 }
 
+/**
+ * Process upload: chunk, embed, upsert to Pinecone.
+ * @param {{ filePath: string, originalName: string, mimeType: string }} input
+ * @returns {Promise<{ fileId: string, fileName: string, uploadDate: string, chunkCount: number }>}
+ */
+async function processAndIndexDocument(input) {
+  console.log(`[upload] start "${input.originalName}" mime=${input.mimeType}`);
+
+  const text = await extractTextFromFile(input.filePath, input.mimeType);
+
+  return chunkEmbedAndUpsert({
+    text,
+    displayName: input.originalName,
+    sourceLabel: "upload",
+  });
+}
+
+/**
+ * Process a web URL the same way as a file upload: fetch, strip chrome, then
+ * run the standard chunk → embed → Pinecone pipeline.
+ *
+ * @param {{ url: string }} input
+ */
+async function processAndIndexUrl(input) {
+  console.log(`[url] start "${input.url}"`);
+
+  const { text, fileName, url } = await extractTextFromUrl(input.url);
+
+  return chunkEmbedAndUpsert({
+    text,
+    displayName: fileName,
+    sourceLabel: "url",
+    extraMetadata: { sourceType: "url", sourceUrl: url },
+  });
+}
+
 module.exports = {
   extractTextFromFile,
   processAndIndexDocument,
+  processAndIndexUrl,
 };

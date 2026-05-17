@@ -6,7 +6,11 @@ const fs = require("fs");
 
 const { PORT, assertEnv, FRONTEND_URL } = require("./utils/env");
 const { ensureIndexReady } = require("./services/pineconeService");
-const { handleUpload, UPLOAD_ROOT } = require("./controllers/uploadController");
+const {
+  handleUpload,
+  handleUploadUrl,
+  UPLOAD_ROOT,
+} = require("./controllers/uploadController");
 const { handleChat } = require("./controllers/chatController");
 const { listFiles, deleteFile } = require("./controllers/filesController");
 
@@ -87,6 +91,7 @@ app.post("/api/upload", (req, res, next) => {
   });
 }, handleUpload);
 
+app.post("/api/upload-url", handleUploadUrl);
 app.post("/api/chat", handleChat);
 app.get("/api/files", listFiles);
 app.delete("/api/files/:fileId", deleteFile);
